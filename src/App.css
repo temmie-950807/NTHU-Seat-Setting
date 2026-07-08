@@ -1,0 +1,475 @@
+:root {
+  --border: #cbd2dc;
+  --border-strong: #334155;
+  --bg: #f5f7fa;
+  --panel: #ffffff;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --muted: #64748b;
+  --seat-bg: #eef2ff;
+  --disabled-bg: #e2e8f0;
+  --warn: #b91c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #0f172a;
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Noto Sans TC', sans-serif;
+}
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+/* ---------- Header / tabs ---------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  padding: 14px 0 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.app-header h1 {
+  font-size: 18px;
+  margin: 0;
+  flex: 0 0 100%;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.tab {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.header-tools {
+  display: flex;
+  gap: 6px;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+}
+.btn:hover {
+  border-color: var(--muted);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.app-main {
+  padding-top: 18px;
+}
+
+/* ---------- Input panel ---------- */
+.input-panel {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: 1fr;
+  max-width: 720px;
+}
+.panel-block {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.panel-block h2 {
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+.hint code,
+.mono {
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+.roster-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+.row-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.room-toggles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.room-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.room-toggle.on {
+  border-color: var(--primary);
+  background: var(--seat-bg);
+}
+.summary {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+.warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* ---------- Toolbar ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+/* ---------- Pool ---------- */
+.pool {
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+  background: #fff;
+}
+.pool-over {
+  background: #fef9c3;
+}
+.pool-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.pool-hint {
+  font-weight: 400;
+  color: var(--muted);
+}
+.pool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+}
+.pool-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Rooms / seat map ---------- */
+.rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.room {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  overflow-x: auto;
+}
+.room-name {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  letter-spacing: 1px;
+}
+.screen {
+  width: 200px;
+  margin: 0 auto 6px;
+  text-align: center;
+  background: #94a3b8;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 0;
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+.room-grid {
+  display: inline-flex;
+  flex-direction: column;
+  margin: 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
+.row-wrap {
+  display: block;
+}
+.aisle-row {
+  height: 26px;
+}
+.seat-row {
+  display: flex;
+  align-items: center;
+}
+.cell-wrap {
+  display: flex;
+  align-items: center;
+}
+.aisle-col {
+  width: 48px;
+}
+.seat {
+  width: 88px;
+  height: 54px;
+  margin: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--seat-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.seat-over {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.seat-disabled {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--disabled-bg),
+    var(--disabled-bg) 6px,
+    #cbd5e1 6px,
+    #cbd5e1 12px
+  );
+  color: var(--muted);
+}
+.seat-editable {
+  cursor: pointer;
+}
+.seat-pos {
+  font-size: 11px;
+  color: var(--muted);
+}
+.seat-x {
+  font-size: 12px;
+  font-weight: 600;
+}
+.chip {
+  border: 1px solid var(--primary);
+  background: #fff;
+  color: #1e293b;
+  border-radius: 6px;
+  padding: 6px 4px;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  font-size: 14px;
+  font-weight: 600;
+  touch-action: none;
+}
+.chip:active {
+  cursor: grabbing;
+}
+.chip-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Password table ---------- */
+.password-table-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.password-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.password-table th,
+.password-table td {
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  text-align: left;
+}
+.password-table thead th {
+  background: #f1f5f9;
+}
+.password-table .mono {
+  letter-spacing: 1px;
+}
+.muted {
+  color: var(--muted);
+}
+.empty {
+  color: var(--muted);
+  padding: 20px 0;
+}
+
+/* ---------- Password slips ---------- */
+.slips-page {
+  margin-bottom: 30px;
+}
+.slips-title {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+.slips-grid {
+  display: grid;
+  gap: 0;
+  border-top: 1px dashed #94a3b8;
+  border-left: 1px dashed #94a3b8;
+  width: 100%;
+}
+.slip-cell {
+  border-right: 1px dashed #94a3b8;
+  border-bottom: 1px dashed #94a3b8;
+  padding: 7px 8px;
+  min-height: 52px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.slip-cell.grp-left {
+  border-left: 2.5px solid var(--border-strong);
+}
+.slip-cell.grp-top {
+  border-top: 2.5px solid var(--border-strong);
+}
+.slip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 6px;
+}
+.slip-label {
+  flex: 0 0 auto;
+  font-size: 9px;
+  color: var(--muted);
+}
+.slip-val {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.slip-empty {
+  background: #f8fafc;
+}
+.slip-blank {
+  min-height: 40px;
+}
+
+/* ---------- Print ---------- */
+@media print {
+  @page {
+    margin: 10mm;
+  }
+  /* 密碼紙採橫向，空間更大 */
+  @page slips {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+  .slips-page {
+    page: slips;
+  }
+  body {
+    background: #fff;
+  }
+  .app {
+    max-width: none;
+    padding: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .room,
+  .panel-block,
+  .password-table-wrap {
+    border: none;
+    padding: 0;
+  }
+  .room {
+    overflow: visible;
+  }
+  .seat,
+  .chip,
+  .screen,
+  .seat-disabled,
+  .slip-cell.grp-left,
+  .slip-cell.grp-top,
+  .slips-grid {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .rooms {
+    gap: 0;
+  }
+  .room {
+    page-break-after: always;
+  }
+  .slips-page {
+    page-break-after: always;
+  }
+  .slips-page:last-child,
+  .room:last-child {
+    page-break-after: auto;
+  }
+}
