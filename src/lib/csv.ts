@@ -10,15 +10,15 @@ function esc(field: string): string {
 }
 
 /**
- * 匯出密碼 CSV（僅 帳號,密碼 兩欄，含 UTF-8 BOM 供 Excel 正確顯示中文）
+ * 匯出密碼 CSV（含 帳號,姓名,密碼 三欄，含 UTF-8 BOM 供 Excel 正確顯示中文）
  */
 export function exportPasswordsCsv(
   students: Student[],
   filename = 'passwords.csv',
 ): void {
-  const header = ['帳號', '密碼'];
-  const rows = students.map((s) => [esc(s.account), esc(s.password)].join(','));
-  const content = '﻿' + [header.join(','), ...rows].join('\r\n');
+  const header = ['帳號', '姓名', '密碼'];
+  const rows = students.map((s) => [esc(s.account), esc(s.name), esc(s.password)].join(','));
+  const content = '\uFEFF' + [header.join(','), ...rows].join('\r\n');
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
   triggerDownload(blob, filename);
 }
