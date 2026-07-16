@@ -1,4 +1,4 @@
-export type RoomId = '326' | '328';
+export type RoomId = '323' | '326' | '328';
 
 export type Student = {
   id: string;

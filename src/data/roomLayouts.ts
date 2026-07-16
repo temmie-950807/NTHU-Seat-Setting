@@ -10,6 +10,12 @@ export type RoomLayout = {
 };
 
 export const ROOM_LAYOUTS: Record<RoomId, RoomLayout> = {
+  '323': {
+    id: '323',
+    name: '323 教室',
+    colGroups: [2, 2], // 2 ｜走道｜2（每排 4 個座位）
+    rowGroups: [12], // 12 排連續，排間無間距
+  },
   '326': {
     id: '326',
     name: '326 教室',
@@ -24,7 +30,7 @@ export const ROOM_LAYOUTS: Record<RoomId, RoomLayout> = {
   },
 };
 
-export const ALL_ROOMS: RoomId[] = ['326', '328'];
+export const ALL_ROOMS: RoomId[] = ['323', '326', '328'];
 
 export function colsOf(layout: RoomLayout): number {
   return layout.colGroups.reduce((a, b) => a + b, 0);
