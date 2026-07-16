@@ -27,18 +27,37 @@ export function seededShuffle<T>(items: T[], seed: number): T[] {
 const roomIndex = (room: RoomId) => ALL_ROOMS.indexOf(room);
 
 /**
- * 前排優先的座位順序：僅取啟用教室、未停用的座位，
- * 依 教室順序 → 排(前排先) → 欄(左→右) 排序。
+ * 分配順序：僅取啟用教室、未停用的座位。
+ * 每間教室各自依 排(前排先) → 欄(左→右) 排好，再「跨教室逐座輪流交錯」，
+ * 使多間教室同時啟用時人數盡量平均（差距 ≤1，某間坐滿會自動溢位到其他間），
+ * 且每間都優先坐前排。單間啟用時等同前排→左欄依序填。
  */
 export function frontFirstSeats(seats: Seat[], enabledRooms: RoomId[]): Seat[] {
   const enabled = new Set(enabledRooms);
-  return seats
-    .filter((s) => enabled.has(s.room) && !s.disabled)
-    .sort((a, b) => {
-      if (a.room !== b.room) return roomIndex(a.room) - roomIndex(b.room);
-      if (a.row !== b.row) return a.row - b.row;
-      return a.col - b.col;
-    });
+  // 依教室分組，僅收啟用且未停用的座位
+  const byRoom = new Map<RoomId, Seat[]>();
+  for (const s of seats) {
+    if (!enabled.has(s.room) || s.disabled) continue;
+    (byRoom.get(s.room) ?? byRoom.set(s.room, []).get(s.room)!).push(s);
+  }
+  // 每間內排序（前排→左欄）；教室間依 ALL_ROOMS 固定順序，確保可重現
+  const queues = [...byRoom.keys()]
+    .sort((a, b) => roomIndex(a) - roomIndex(b))
+    .map((room) =>
+      byRoom
+        .get(room)!
+        .slice()
+        .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col)),
+    );
+  // 逐座輪流交錯：第 i 輪從每間各取第 i 個座位（該間還有的話）
+  const result: Seat[] = [];
+  const maxLen = queues.reduce((m, q) => Math.max(m, q.length), 0);
+  for (let i = 0; i < maxLen; i++) {
+    for (const q of queues) {
+      if (i < q.length) result.push(q[i]);
+    }
+  }
+  return result;
 }
 
 export type AssignResult = {
