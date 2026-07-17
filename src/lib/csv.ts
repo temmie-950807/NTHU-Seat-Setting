@@ -22,3 +22,35 @@ export function exportPasswordsCsv(
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
   triggerDownload(blob, filename);
 }
+
+export type GroupCsvRow = {
+  account: string;
+  roomName: string; // 教室名（未安排則空）
+  label: string; // 座位範圍（未安排則空）
+  members: string[];
+  password: string;
+};
+
+/** 匯出分組密碼 CSV（組名,教室,座位,組員1-3,密碼；含 UTF-8 BOM） */
+export function exportGroupsCsv(
+  rows: GroupCsvRow[],
+  filename = 'groups.csv',
+): void {
+  const header = ['組名', '教室', '座位', '組員1', '組員2', '組員3', '密碼'];
+  const lines = rows.map((r) =>
+    [
+      r.account,
+      r.roomName,
+      r.label,
+      r.members[0] ?? '',
+      r.members[1] ?? '',
+      r.members[2] ?? '',
+      r.password,
+    ]
+      .map(esc)
+      .join(','),
+  );
+  const content = '﻿' + [header.join(','), ...lines].join('\r\n');
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  triggerDownload(blob, filename);
+}

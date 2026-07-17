@@ -1,14 +1,19 @@
 import type { AppState, Seat } from '../types';
 import { makeAllSeats, keyOfSeat, ALL_ROOMS } from '../data/roomLayouts';
+import { allGroupAnchorKeys } from '../data/groupLayouts';
 
 const STORAGE_KEY = 'exam-seat-state-v1';
 
 export function defaultState(): AppState {
   return {
+    mode: 'individual',
     students: [],
     enabledRooms: [...ALL_ROOMS],
     seats: makeAllSeats(),
     seed: 1,
+    groups: [],
+    groupSeed: 1,
+    slotAssign: {},
   };
 }
 
@@ -37,10 +42,24 @@ function reconcileSeats(old: Seat[]): Seat[] {
   });
 }
 
+/** 校準分組指派：丟棄錨座位已不存在於現行組槽的項目 */
+function reconcileSlotAssign(
+  old: Record<string, string> | undefined,
+): Record<string, string> {
+  if (!old) return {};
+  const valid = allGroupAnchorKeys();
+  const out: Record<string, string> = {};
+  for (const [anchor, gid] of Object.entries(old)) {
+    if (valid.has(anchor)) out[anchor] = gid;
+  }
+  return out;
+}
+
 /** 與預設合併，容忍舊資料缺欄位 */
 function mergeState(partial: Partial<AppState>): AppState {
   const base = defaultState();
   return {
+    mode: partial.mode === 'group' ? 'group' : 'individual',
     students: partial.students ?? base.students,
     enabledRooms:
       partial.enabledRooms && partial.enabledRooms.length
@@ -48,6 +67,9 @@ function mergeState(partial: Partial<AppState>): AppState {
         : base.enabledRooms,
     seats: reconcileSeats(partial.seats ?? []),
     seed: partial.seed ?? base.seed,
+    groups: partial.groups ?? base.groups,
+    groupSeed: partial.groupSeed ?? base.groupSeed,
+    slotAssign: reconcileSlotAssign(partial.slotAssign),
   };
 }
 

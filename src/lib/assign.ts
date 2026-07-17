@@ -1,5 +1,6 @@
-import type { RoomId, Seat, Student } from '../types';
+import type { Group, RoomId, Seat, Student } from '../types';
 import { ALL_ROOMS } from '../data/roomLayouts';
+import { groupSlotsForRoom, type GroupSlot } from '../data/groupLayouts';
 
 /** mulberry32：以整數種子建立可重現 PRNG，回傳 [0,1) */
 export function mulberry32(seed: number): () => number {
@@ -26,6 +27,18 @@ export function seededShuffle<T>(items: T[], seed: number): T[] {
 
 const roomIndex = (room: RoomId) => ALL_ROOMS.indexOf(room);
 
+/** 跨教室逐項交錯：queues 為各教室已排序序列，第 i 輪從每間各取第 i 個 */
+function interleave<T>(queues: T[][]): T[] {
+  const result: T[] = [];
+  const maxLen = queues.reduce((m, q) => Math.max(m, q.length), 0);
+  for (let i = 0; i < maxLen; i++) {
+    for (const q of queues) {
+      if (i < q.length) result.push(q[i]);
+    }
+  }
+  return result;
+}
+
 /**
  * 分配順序：僅取啟用教室、未停用的座位。
  * 每間教室各自依 排(前排先) → 欄(左→右) 排好，再「跨教室逐座輪流交錯」，
@@ -50,14 +63,7 @@ export function frontFirstSeats(seats: Seat[], enabledRooms: RoomId[]): Seat[] {
         .sort((a, b) => (a.row !== b.row ? a.row - b.row : a.col - b.col)),
     );
   // 逐座輪流交錯：第 i 輪從每間各取第 i 個座位（該間還有的話）
-  const result: Seat[] = [];
-  const maxLen = queues.reduce((m, q) => Math.max(m, q.length), 0);
-  for (let i = 0; i < maxLen; i++) {
-    for (const q of queues) {
-      if (i < q.length) result.push(q[i]);
-    }
-  }
-  return result;
+  return interleave(queues);
 }
 
 export type AssignResult = {
@@ -139,4 +145,93 @@ export function unseatedStudentIds(
     seats.map((s) => s.studentId).filter((x): x is string => !!x),
   );
   return students.filter((s) => !seated.has(s.id)).map((s) => s.id);
+}
+
+// ===== 分組模式 =====
+
+export type GroupAssignResult = {
+  slotAssign: Record<string, string>; // 組槽錨 key → groupId
+  shortage: number; // 缺額（組數 - 可用組槽數，>0 表示組槽不足）
+  assignedCount: number;
+};
+
+/**
+ * 分組分配順序：各啟用教室的組槽依「靠講台（前排）優先」排序後跨教室交錯，
+ * 使多間教室同時啟用時組數盡量平均，且每間都優先坐靠講台的前排。
+ */
+export function frontFirstSlots(enabledRooms: RoomId[]): GroupSlot[] {
+  const rooms = [...new Set(enabledRooms)].sort(
+    (a, b) => roomIndex(a) - roomIndex(b),
+  );
+  const queues = rooms.map((room) =>
+    groupSlotsForRoom(room)
+      .slice()
+      .sort((a, b) =>
+        a.sortRow !== b.sortRow ? a.sortRow - b.sortRow : a.sortCol - b.sortCol,
+      ),
+  );
+  return interleave(queues);
+}
+
+/** 依種子把組隨機分配到組槽（可重現；靠講台前排優先、跨教室平均） */
+export function assignGroups(
+  groups: Group[],
+  enabledRooms: RoomId[],
+  seed: number,
+): GroupAssignResult {
+  const order = frontFirstSlots(enabledRooms);
+  const shuffled = seededShuffle(groups, seed);
+  const n = Math.min(shuffled.length, order.length);
+  const slotAssign: Record<string, string> = {};
+  for (let i = 0; i < n; i++) {
+    slotAssign[order[i].anchorKey] = shuffled[i].id;
+  }
+  return {
+    slotAssign,
+    shortage: Math.max(0, groups.length - order.length),
+    assignedCount: n,
+  };
+}
+
+/**
+ * 分組模式手動調整：把某組移到 toAnchor 組槽（放置／互換）；
+ * toAnchor 為 null＝退回「待安排」區。
+ * - 目標組槽已有組＝互換（來源在座則交換；來源為待安排則原組被擠回待安排）。
+ */
+export function placeGroup(
+  slotAssign: Record<string, string>,
+  groupId: string,
+  toAnchor: string | null,
+): Record<string, string> {
+  let fromAnchor: string | null = null;
+  for (const [anchor, gid] of Object.entries(slotAssign)) {
+    if (gid === groupId) {
+      fromAnchor = anchor;
+      break;
+    }
+  }
+  if (toAnchor === fromAnchor) return slotAssign;
+
+  const next = { ...slotAssign };
+  if (toAnchor === null) {
+    if (fromAnchor) delete next[fromAnchor];
+    return next;
+  }
+  const displaced = next[toAnchor] ?? null;
+  next[toAnchor] = groupId;
+  if (fromAnchor) {
+    if (displaced) next[fromAnchor] = displaced;
+    else delete next[fromAnchor];
+  }
+  // fromAnchor 為 null（來自待安排）時，displaced 自動退回待安排，無需處理
+  return next;
+}
+
+/** 尚未分配到組槽的組 id */
+export function unassignedGroupIds(
+  groups: Group[],
+  slotAssign: Record<string, string>,
+): string[] {
+  const assigned = new Set(Object.values(slotAssign));
+  return groups.filter((g) => !assigned.has(g.id)).map((g) => g.id);
 }

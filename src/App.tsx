@@ -6,7 +6,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import type { AppState, RoomId } from './types';
+import type { AppState, Mode, RoomId } from './types';
 import {
   loadState,
   saveState,
@@ -14,11 +14,15 @@ import {
   parseStateJson,
 } from './lib/storage';
 import { parseRoster, buildStudents } from './lib/students';
+import { parseGroups, buildGroups } from './lib/groups';
 import {
   assignSeats,
   placeStudent,
   toggleSeatDisabled,
   unseatedStudentIds,
+  assignGroups,
+  placeGroup,
+  unassignedGroupIds,
 } from './lib/assign';
 import { generateUniquePasswords } from './lib/password';
 import { ALL_ROOMS } from './data/roomLayouts';
@@ -27,6 +31,10 @@ import SeatMap from './components/SeatMap';
 import Pool from './components/Pool';
 import PasswordTable from './components/PasswordTable';
 import PasswordSlips from './components/PasswordSlips';
+import GroupSeatMap from './components/GroupSeatMap';
+import GroupPool from './components/GroupPool';
+import GroupPasswordTable from './components/GroupPasswordTable';
+import GroupPasswordSlips from './components/GroupPasswordSlips';
 import './App.css';
 
 type Tab = 'input' | 'seats' | 'passwords' | 'slips';
@@ -56,6 +64,19 @@ export default function App() {
     const ids = new Set(unseatedStudentIds(state.students, state.seats));
     return state.students.filter((s) => ids.has(s.id));
   }, [state.students, state.seats]);
+
+  const groupsById = useMemo(
+    () => new Map(state.groups.map((g) => [g.id, g] as const)),
+    [state.groups],
+  );
+
+  const unassignedGroups = useMemo(() => {
+    const ids = new Set(unassignedGroupIds(state.groups, state.slotAssign));
+    return state.groups.filter((g) => ids.has(g.id));
+  }, [state.groups, state.slotAssign]);
+
+  const isGroup = state.mode === 'group';
+  const setMode = (mode: Mode) => setState((prev) => ({ ...prev, mode }));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -89,19 +110,46 @@ export default function App() {
     });
   };
 
+  // 套用分組名單：解析 → 建立組（含密碼）→ 依現有啟用教室隨機排組
+  const applyGroups = (text: string) => {
+    const groups = buildGroups(parseGroups(text));
+    setState((prev) => {
+      const { slotAssign } = assignGroups(groups, prev.enabledRooms, prev.groupSeed);
+      return { ...prev, groups, slotAssign };
+    });
+    setTab('seats');
+  };
+
+  const reshuffleGroups = () => {
+    setState((prev) => {
+      const groupSeed = prev.groupSeed + 1;
+      const { slotAssign } = assignGroups(prev.groups, prev.enabledRooms, groupSeed);
+      return { ...prev, groupSeed, slotAssign };
+    });
+  };
+
   const toggleRoom = (room: RoomId) => {
     setState((prev) => {
       const has = prev.enabledRooms.includes(room);
       const enabledRooms = has
         ? prev.enabledRooms.filter((r) => r !== room)
         : ALL_ROOMS.filter((r) => prev.enabledRooms.includes(r) || r === room);
-      // 停用教室：清掉該室座位上的人（退回待安排）
-      const seats = has
-        ? prev.seats.map((s) =>
-            s.room === room ? { ...s, studentId: null } : s,
-          )
-        : prev.seats;
-      return { ...prev, enabledRooms, seats };
+      // 停用教室：分組模式清掉該室組槽指派、個人模式清掉該室座位上的人（皆退回待安排）
+      const slotAssign =
+        has && prev.mode === 'group'
+          ? Object.fromEntries(
+              Object.entries(prev.slotAssign).filter(
+                ([anchor]) => !anchor.startsWith(`${room}-`),
+              ),
+            )
+          : prev.slotAssign;
+      const seats =
+        has && prev.mode !== 'group'
+          ? prev.seats.map((s) =>
+              s.room === room ? { ...s, studentId: null } : s,
+            )
+          : prev.seats;
+      return { ...prev, enabledRooms, seats, slotAssign };
     });
   };
 
@@ -114,9 +162,25 @@ export default function App() {
 
   const onDragEnd = (e: DragEndEvent) => {
     const activeId = String(e.active.id);
+    const overId = e.over ? String(e.over.id) : null;
+
+    // 分組模式：拖曳整組
+    if (activeId.startsWith('grp:')) {
+      const groupId = activeId.slice(4);
+      let toAnchor: string | null = null;
+      if (overId === 'pool') toAnchor = null;
+      else if (overId?.startsWith('slot:')) toAnchor = overId.slice(5).split('|')[0];
+      else return; // 沒有有效落點
+      setState((prev) => ({
+        ...prev,
+        slotAssign: placeGroup(prev.slotAssign, groupId, toAnchor),
+      }));
+      return;
+    }
+
+    // 個人模式：拖曳學生
     if (!activeId.startsWith('stu:')) return;
     const studentId = activeId.slice(4);
-    const overId = e.over ? String(e.over.id) : null;
     let toKey: string | null = null;
     if (overId === 'pool') toKey = null;
     else if (overId?.startsWith('seat:')) toKey = overId.slice(5);
@@ -147,6 +211,31 @@ export default function App() {
         ...prev,
         students: prev.students.map((s) =>
           s.id === id ? { ...s, password: pw } : s,
+        ),
+      };
+    });
+  };
+
+  const regenerateAllGroups = () => {
+    setState((prev) => {
+      const pws = generateUniquePasswords(prev.groups.length);
+      return {
+        ...prev,
+        groups: prev.groups.map((g, i) => ({ ...g, password: pws[i] })),
+      };
+    });
+  };
+
+  const regenerateOneGroup = (id: string) => {
+    setState((prev) => {
+      const existing = new Set(
+        prev.groups.filter((g) => g.id !== id).map((g) => g.password),
+      );
+      const [pw] = generateUniquePasswords(1, existing);
+      return {
+        ...prev,
+        groups: prev.groups.map((g) =>
+          g.id === id ? { ...g, password: pw } : g,
         ),
       };
     });
@@ -183,6 +272,22 @@ export default function App() {
           ))}
         </nav>
         <div className="header-tools">
+          <div className="mode-switch">
+            <button
+              className={'mode-btn' + (!isGroup ? ' active' : '')}
+              type="button"
+              onClick={() => setMode('individual')}
+            >
+              個人
+            </button>
+            <button
+              className={'mode-btn' + (isGroup ? ' active' : '')}
+              type="button"
+              onClick={() => setMode('group')}
+            >
+              分組
+            </button>
+          </div>
           <button
             className="btn btn-sm"
             type="button"
@@ -209,78 +314,141 @@ export default function App() {
       <main className="app-main">
         {tab === 'input' && (
           <InputPanel
+            mode={state.mode}
             enabledRooms={state.enabledRooms}
-            studentCount={state.students.length}
+            count={isGroup ? state.groups.length : state.students.length}
             onToggleRoom={toggleRoom}
-            onApplyRoster={applyRoster}
+            onApply={isGroup ? applyGroups : applyRoster}
           />
         )}
 
         {tab === 'seats' && (
           <div className="seats-view">
             <div className="toolbar no-print">
-              <span>
-                已入座 <b>{seatedCount}</b> / 名單 <b>{state.students.length}</b>{' '}
-                人
-              </span>
-              <button className="btn" type="button" onClick={reshuffle}>
-                重新洗牌
-              </button>
-              <button
-                className={'btn' + (editMode ? ' btn-primary' : '')}
-                type="button"
-                onClick={() => setEditMode((v) => !v)}
-              >
-                {editMode ? '完成停用座位' : '停用座位模式'}
-              </button>
-              <button
-                className="btn"
-                type="button"
-                onClick={() => window.print()}
-              >
-                列印座位表
-              </button>
-              {editMode && (
-                <span className="warn">
-                  點座位可切換「停用」；停用時佔位者退回待安排。
-                </span>
+              {isGroup ? (
+                <>
+                  <span>
+                    已安排 <b>{Object.keys(state.slotAssign).length}</b> / 名單{' '}
+                    <b>{state.groups.length}</b> 組
+                  </span>
+                  <button className="btn" type="button" onClick={reshuffleGroups}>
+                    重新洗牌
+                  </button>
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => window.print()}
+                  >
+                    列印座位表
+                  </button>
+                  <span className="warn">
+                    可把「待安排」的組拖到組槽，或拖曳已安排的組互換位置。
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    已入座 <b>{seatedCount}</b> / 名單{' '}
+                    <b>{state.students.length}</b> 人
+                  </span>
+                  <button className="btn" type="button" onClick={reshuffle}>
+                    重新洗牌
+                  </button>
+                  <button
+                    className={'btn' + (editMode ? ' btn-primary' : '')}
+                    type="button"
+                    onClick={() => setEditMode((v) => !v)}
+                  >
+                    {editMode ? '完成停用座位' : '停用座位模式'}
+                  </button>
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => window.print()}
+                  >
+                    列印座位表
+                  </button>
+                  {editMode && (
+                    <span className="warn">
+                      點座位可切換「停用」；停用時佔位者退回待安排。
+                    </span>
+                  )}
+                </>
               )}
             </div>
 
             <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-              {!editMode && <Pool students={unseated} />}
-              <div className="rooms">
-                {state.enabledRooms.length === 0 ? (
-                  <p className="empty">尚未啟用教室，請至「資料輸入」勾選。</p>
-                ) : (
-                  state.enabledRooms.map((room) => (
-                    <SeatMap
-                      key={room}
-                      room={room}
-                      seats={state.seats}
-                      studentsById={studentsById}
-                      editMode={editMode}
-                      onToggleDisabled={onToggleSeatDisabled}
-                    />
-                  ))
-                )}
-              </div>
+              {isGroup ? (
+                <>
+                  <GroupPool groups={unassignedGroups} />
+                  <div className="rooms">
+                    {state.enabledRooms.length === 0 ? (
+                      <p className="empty">
+                        尚未啟用教室，請至「資料輸入」勾選。
+                      </p>
+                    ) : (
+                      state.enabledRooms.map((room) => (
+                        <GroupSeatMap
+                          key={room}
+                          room={room}
+                          slotAssign={state.slotAssign}
+                          groupsById={groupsById}
+                        />
+                      ))
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {!editMode && <Pool students={unseated} />}
+                  <div className="rooms">
+                    {state.enabledRooms.length === 0 ? (
+                      <p className="empty">
+                        尚未啟用教室，請至「資料輸入」勾選。
+                      </p>
+                    ) : (
+                      state.enabledRooms.map((room) => (
+                        <SeatMap
+                          key={room}
+                          room={room}
+                          seats={state.seats}
+                          studentsById={studentsById}
+                          editMode={editMode}
+                          onToggleDisabled={onToggleSeatDisabled}
+                        />
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </DndContext>
           </div>
         )}
 
-        {tab === 'passwords' && (
-          <PasswordTable
-            students={state.students}
-            onRegenerateOne={regenerateOne}
-            onRegenerateAll={regenerateAll}
-          />
-        )}
+        {tab === 'passwords' &&
+          (isGroup ? (
+            <GroupPasswordTable
+              groups={state.groups}
+              slotAssign={state.slotAssign}
+              onRegenerateOne={regenerateOneGroup}
+              onRegenerateAll={regenerateAllGroups}
+            />
+          ) : (
+            <PasswordTable
+              students={state.students}
+              onRegenerateOne={regenerateOne}
+              onRegenerateAll={regenerateAll}
+            />
+          ))}
 
         {tab === 'slips' && (
           <div className="slips-view">
             <div className="toolbar no-print">
-              <span>密碼紙鏡射教室座位；沿虛線裁切、粗線為走道分隔。</span>
+              <span>
+                {isGroup
+                  ? '每組一張密碼卡；沿虛線裁切後發給各組。'
+                  : '密碼紙鏡射教室座位；沿虛線裁切、粗線為走道分隔。'}
+              </span>
               <button
                 className="btn"
                 type="button"
@@ -289,11 +457,19 @@ export default function App() {
                 列印密碼紙
               </button>
             </div>
-            <PasswordSlips
-              enabledRooms={state.enabledRooms}
-              seats={state.seats}
-              studentsById={studentsById}
-            />
+            {isGroup ? (
+              <GroupPasswordSlips
+                enabledRooms={state.enabledRooms}
+                slotAssign={state.slotAssign}
+                groupsById={groupsById}
+              />
+            ) : (
+              <PasswordSlips
+                enabledRooms={state.enabledRooms}
+                seats={state.seats}
+                studentsById={studentsById}
+              />
+            )}
           </div>
         )}
       </main>

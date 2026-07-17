@@ -455,7 +455,12 @@ body {
   .seat-disabled,
   .slip-cell.grp-left,
   .slip-cell.grp-top,
-  .slips-grid {
+  .slips-grid,
+  .grp-box,
+  .grp-box.filled,
+  .grp-box-tag,
+  .grp-desk-unused,
+  .group-slip {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -471,5 +476,240 @@ body {
   .slips-page:last-child,
   .room:last-child {
     page-break-after: auto;
+  }
+}
+
+/* ---------- 模式切換 ---------- */
+.mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-right: 8px;
+}
+.mode-btn {
+  border: none;
+  background: #fff;
+  color: var(--muted);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mode-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ---------- 分組：座位圖（同組連成大矩形，教室置中） ---------- */
+.room.group-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.group-room-grid {
+  display: inline-flex;
+}
+.group-room-grid.horizontal {
+  flex-direction: column; /* 一排一列（前→後由上而下） */
+}
+.group-room-grid.vertical {
+  flex-direction: row; /* 一欄一行（左→右） */
+  align-items: flex-start;
+}
+.grp-line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.grp-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 同組三座＝一個大矩形；外框實線、內部以虛線相連 */
+.grp-box {
+  position: relative;
+  display: flex;
+  margin: 4px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--seat-bg);
+  overflow: hidden;
+}
+.grp-box.horizontal {
+  flex-direction: row;
+}
+.grp-box.vertical {
+  flex-direction: column;
+}
+.grp-box.filled {
+  border-color: var(--primary);
+  cursor: grab;
+}
+.grp-box.over {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.grp-box .grp-cell {
+  width: 84px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* 相鄰兩格之間的虛線分隔 */
+.grp-box.horizontal .grp-cell + .grp-cell {
+  border-left: 1px dashed var(--border-strong);
+}
+.grp-box.vertical .grp-cell + .grp-cell {
+  border-top: 1px dashed var(--border-strong);
+}
+.grp-box-tag {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0 2px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: 96%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.grp-box .chip-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+/* 組間走道 */
+.grp-aisle-col {
+  width: 40px;
+}
+.grp-aisle-row {
+  height: 22px;
+}
+/* 左右組之間沒用到的桌子（如 328） */
+.grp-desk-unused {
+  align-self: center;
+  width: 84px;
+  height: 50px;
+  margin: 4px 8px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--disabled-bg),
+    var(--disabled-bg) 6px,
+    #cbd5e1 6px,
+    #cbd5e1 12px
+  );
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+/* ---------- 分組：待安排晶片副標 ---------- */
+.group-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  height: auto;
+  min-height: 44px;
+}
+.chip-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ---------- 分組：密碼卡（依座位相對位置排列） ---------- */
+.group-slips-layout {
+  display: inline-flex;
+}
+.group-slips-layout.horizontal {
+  flex-direction: column;
+}
+.group-slips-layout.vertical {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.gsl-line {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+.gsl-col {
+  display: flex;
+  flex-direction: column;
+}
+.group-slip {
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 5px;
+  width: 210px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  break-inside: avoid;
+  background: #fff;
+}
+.group-slip-empty {
+  border-style: dashed;
+  border-color: var(--border);
+  background: #f8fafc;
+}
+.gs-head {
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 5px;
+}
+.gs-team {
+  font-size: 16px;
+  font-weight: 700;
+}
+.gs-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.gs-label {
+  flex: 0 0 auto;
+  font-size: 13px;
+  color: var(--muted);
+}
+.gs-val {
+  font-size: 15px;
+  font-weight: 600;
+}
+/* 密碼卡走道間隔 */
+.gsl-aisle-col {
+  width: 24px;
+}
+.gsl-aisle-row {
+  height: 14px;
+}
+
+@media print {
+  .gsl-aisle-col {
+    width: 8mm;
+  }
+  .gsl-aisle-row {
+    height: 4mm;
   }
 }
