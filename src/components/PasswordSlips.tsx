@@ -31,9 +31,9 @@ function RoomSlips({
   const byKey = new Map(seats.map((s) => [seatKeyOf(s), s] as const));
 
   return (
-    <section className="slips-page">
+    <section className={`slips-page room-${room}`}>
       <h3 className="slips-title">
-        {layout.name}　密碼紙（建議橫向列印；沿虛線裁切、粗線為走道分隔）
+        {layout.name}　密碼紙（沿虛線裁切、粗線為走道分隔）
       </h3>
       <div
         className="slips-grid"

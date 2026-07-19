@@ -33,7 +33,7 @@ export default function SeatMap({
   const byKey = new Map(seats.map((s) => [seatKeyOf(s), s] as const));
 
   return (
-    <section className="room">
+    <section className={`room room-${room}`}>
       <h2 className="room-name">{layout.name}</h2>
       <div className="screen">[ 投影幕 ]</div>
       <div className="room-grid">

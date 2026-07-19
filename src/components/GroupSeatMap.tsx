@@ -74,7 +74,7 @@ export default function GroupSeatMap({ room, slotAssign, groupsById }: Props) {
   };
 
   return (
-    <section className="room group-room">
+    <section className={`room group-room room-${room}`}>
       <h2 className="room-name">{layout.name}</h2>
       <div className="screen">[ 投影幕 ]</div>
       <div className={`group-room-grid ${grid.direction}`}>

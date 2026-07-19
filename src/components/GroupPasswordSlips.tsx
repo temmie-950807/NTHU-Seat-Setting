@@ -34,7 +34,7 @@ function RoomGroupSlips({
   if (!hasAny) return null;
 
   return (
-    <section className="slips-page">
+    <section className={`slips-page group-slips-page room-${room}`}>
       <h3 className="slips-title">
         {layout.name}　分組密碼紙（依座位相對位置排列，沿虛線裁切發給各組）
       </h3>
@@ -69,9 +69,9 @@ function RoomGroupSlips({
                           <span className="gs-label">密碼</span>
                           <span className="gs-val mono">{group.password}</span>
                         </div>
-                        <div className="gs-row">
+                        <div className="gs-row gs-members">
                           <span className="gs-label">組員</span>
-                          <span className="gs-val">
+                          <span className="gs-val gs-members-val">
                             {membersText(group) || '(無成員)'}
                           </span>
                         </div>

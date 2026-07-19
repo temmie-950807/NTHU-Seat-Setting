@@ -422,13 +422,21 @@ body {
   @page {
     margin: 10mm;
   }
-  /* 密碼紙採橫向，空間更大 */
-  @page slips {
+  /* 依教室決定列印方向：323 直式、326／328 橫式 */
+  @page portrait-a4 {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  @page landscape-a4 {
     size: A4 landscape;
     margin: 8mm;
   }
-  .slips-page {
-    page: slips;
+  .room-323 {
+    page: portrait-a4;
+  }
+  .room-326,
+  .room-328 {
+    page: landscape-a4;
   }
   body {
     background: #fff;
@@ -662,8 +670,8 @@ body {
   border-radius: 8px;
   padding: 12px 16px;
   margin: 5px;
-  width: 210px;
-  min-height: 96px;
+  width: 280px;
+  min-height: 116px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -697,6 +705,16 @@ body {
   font-size: 15px;
   font-weight: 600;
 }
+/* 組員：允許換到第二行，姓名不再擠成一行 */
+.gs-members {
+  align-items: flex-start;
+}
+.gs-members-val {
+  flex: 1 1 auto;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 /* 密碼卡走道間隔 */
 .gsl-aisle-col {
   width: 24px;
@@ -711,5 +729,84 @@ body {
   }
   .gsl-aisle-row {
     height: 4mm;
+  }
+  /* 列印小組密碼卡：整頁 flex 撐滿並平均分配，
+     不論欄數／列數多少都壓進「一頁」，且格子在可用空間內盡量放大。 */
+  .group-slips-page {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .group-slips-page .slips-title {
+    flex: 0 0 auto;
+  }
+  .group-slips-page .group-slips-layout {
+    flex: 1 1 auto;
+    display: flex;
+    width: 100%;
+    min-height: 0;
+  }
+  /* 直式（323）：橫向多欄 → 欄平均分寬、欄內卡片平均分高 */
+  .group-slips-layout.vertical {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .group-slips-layout.vertical > .gsl-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .group-slips-layout.vertical .gsl-col > .group-slip {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+  /* 橫式（326／328）：直向多列 → 列平均分高、列內卡片平均分寬 */
+  .group-slips-layout.horizontal {
+    flex-direction: column;
+  }
+  .group-slips-layout.horizontal > .gsl-line {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+  }
+  .group-slips-layout.horizontal .gsl-line > .group-slip {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .group-slip {
+    width: auto;
+    min-height: 0;
+  }
+  /* 列印精簡：列數多（如 326 的 8 列）時內容也能塞進單頁 */
+  .group-slips-page .group-slip {
+    padding: 5px 10px;
+    gap: 3px;
+    border-radius: 6px;
+  }
+  .group-slips-page .gs-head {
+    padding-bottom: 3px;
+  }
+  .group-slips-page .gs-team {
+    font-size: 13px;
+  }
+  .group-slips-page .gs-label {
+    font-size: 10px;
+  }
+  .group-slips-page .gs-val {
+    font-size: 11.5px;
+  }
+  .group-slips-page .gs-members-val {
+    line-height: 1.3;
+  }
+  /* 單頁可用高度（含 @page margin 後的內容區，取略小值保底不溢頁） */
+  .group-slips-page.room-323 {
+    height: 1035px; /* A4 直式，10mm 邊界 */
+  }
+  .group-slips-page.room-326,
+  .group-slips-page.room-328 {
+    height: 720px; /* A4 橫式，8mm 邊界 */
   }
 }
